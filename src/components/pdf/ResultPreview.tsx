@@ -4,14 +4,15 @@ import { ResumeDocument } from './ResumeDocument';
 import { generateDocx } from './DocxGenerator';
 import type { PolishedResumeData } from '../../types';
 import { Button } from '../ui/Button';
-import { FileText, RefreshCw, Eye, FileType, ChevronDown, ChevronUp, Briefcase, GraduationCap, Wrench } from 'lucide-react';
+import { FileText, RefreshCw, Eye, FileType, ChevronDown, ChevronUp, Briefcase, GraduationCap, Wrench, Edit3 } from 'lucide-react';
 
 interface ResultPreviewProps {
     data: PolishedResumeData;
     onStartOver: () => void;
+    onEditResume: () => void;
 }
 
-export function ResultPreview({ data, onStartOver }: ResultPreviewProps) {
+export function ResultPreview({ data, onStartOver, onEditResume }: ResultPreviewProps) {
     const [showPdfPreview, setShowPdfPreview] = useState(false);
     const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
     const fileName = `${data.personalInfo.fullName.replace(/\s+/g, '_')}_Resume`;
@@ -43,9 +44,14 @@ export function ResultPreview({ data, onStartOver }: ResultPreviewProps) {
                         Review your AI-polished content, then download as PDF or DOCX
                     </p>
                 </div>
-                <Button variant="secondary" onClick={onStartOver} icon={<RefreshCw className="w-4 h-4" />}>
-                    Start Over
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="secondary" onClick={onEditResume} icon={<Edit3 className="w-4 h-4" />}>
+                        Edit Resume
+                    </Button>
+                    <Button variant="ghost" onClick={onStartOver} icon={<RefreshCw className="w-4 h-4" />}>
+                        Start Over
+                    </Button>
+                </div>
             </div>
 
             {/* AI-Generated Summary */}

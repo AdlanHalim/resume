@@ -1,17 +1,46 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, TabStopType, TabStopPosition } from 'docx';
 import { saveAs } from 'file-saver';
-import type { PolishedResumeData } from '../../types';
+import type { PolishedResumeData, PolishedExperience } from '../../types';
 
 function formatDate(date: string): string {
     if (!date) return '';
     const [year, month] = date.split('-');
-    return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
+}
+
+function createSectionHeader(title: string): Paragraph {
+    return new Paragraph({
+        children: [
+            new TextRun({
+                text: title.toUpperCase(),
+                bold: true,
+                size: 22, // 11pt
+            }),
+        ],
+        border: {
+            bottom: { style: BorderStyle.SINGLE, size: 12, color: '2d5986' },
+        },
+        spacing: { before: 240, after: 120 },
+    });
+}
+
+function createBulletPoint(text: string): Paragraph {
+    return new Paragraph({
+        children: [
+            new TextRun({
+                text: `• ${text}`,
+                size: 20, // 10pt
+            }),
+        ],
+        indent: { left: 360 },
+        spacing: { after: 40 },
+    });
 }
 
 export async function generateDocx(data: PolishedResumeData): Promise<void> {
     const { personalInfo, experiences, education, skills } = data;
     const isStudent = personalInfo.profileType === 'student';
-
     const children: Paragraph[] = [];
 
     // Header - Name
@@ -19,185 +48,249 @@ export async function generateDocx(data: PolishedResumeData): Promise<void> {
         new Paragraph({
             children: [
                 new TextRun({
-                    text: personalInfo.fullName,
+                    text: personalInfo.fullName.toUpperCase(),
                     bold: true,
-                    size: 48, // 24pt
+                    size: 44, // 22pt
+                    color: '1a365d',
                 }),
             ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 100 },
+            spacing: { after: 40 },
         })
     );
 
-    // Contact line
-    const contactParts = [
-        personalInfo.email,
-        personalInfo.phone,
-        personalInfo.location,
-    ].filter(Boolean);
-
-    if (personalInfo.linkedin) contactParts.push(personalInfo.linkedin);
-    if (personalInfo.portfolio) contactParts.push(personalInfo.portfolio);
-
-    children.push(
-        new Paragraph({
-            children: [
-                new TextRun({
-                    text: contactParts.join(' | '),
-                    size: 20, // 10pt
-                }),
-            ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 200 },
-            border: {
-                bottom: { style: BorderStyle.SINGLE, size: 12, color: '2563eb' },
-            },
-        })
-    );
-
-    // Summary
+    // Tagline from first sentence of summary
     if (personalInfo.summary) {
         children.push(
             new Paragraph({
                 children: [
                     new TextRun({
-                        text: personalInfo.summary,
-                        italics: true,
-                        size: 20,
+                        text: personalInfo.summary.split('.')[0].trim(),
+                        size: 24, // 12pt
+                        color: '333333',
                     }),
                 ],
-                spacing: { before: 200, after: 300 },
+                spacing: { after: 160 },
             })
         );
     }
 
-    // Helper function to add a section
-    const addSection = (title: string, content: Paragraph[]) => {
+    // Contact Info Grid
+    const contactInfo = [
+        { label: 'Phone Number', value: personalInfo.phone },
+        { label: 'Email', value: personalInfo.email },
+        { label: 'LinkedIn', value: personalInfo.linkedin },
+        { label: 'Address', value: personalInfo.location },
+    ].filter(c => c.value);
+
+    for (const contact of contactInfo) {
         children.push(
             new Paragraph({
-                text: title.toUpperCase(),
-                heading: HeadingLevel.HEADING_2,
-                spacing: { before: 300, after: 100 },
-                border: {
-                    bottom: { style: BorderStyle.SINGLE, size: 6, color: 'cccccc' },
-                },
-            })
-        );
-        children.push(...content);
-    };
-
-    // Experience section
-    const experienceContent: Paragraph[] = [];
-    for (const exp of experiences) {
-        experienceContent.push(
-            new Paragraph({
                 children: [
-                    new TextRun({ text: exp.title, bold: true, size: 22 }),
-                    new TextRun({ text: ` at ${exp.company}`, size: 22 }),
+                    new TextRun({ text: contact.label, size: 20 }),
+                    new TextRun({ text: '\t:\t', size: 20 }),
                     new TextRun({
-                        text: `  |  ${formatDate(exp.startDate)} - ${exp.current ? 'Present' : formatDate(exp.endDate)}`,
-                        size: 18,
-                        color: '666666',
+                        text: contact.value || '',
+                        size: 20,
+                        color: contact.label === 'Email' || contact.label === 'LinkedIn' ? '2d5986' : '000000',
                     }),
                 ],
-                spacing: { before: 150 },
+                tabStops: [
+                    { type: TabStopType.LEFT, position: TabStopPosition.MAX / 10 },
+                ],
+                spacing: { after: 40 },
             })
         );
+    }
 
-        for (const bullet of exp.bulletPoints) {
-            experienceContent.push(
+    // Summary Section
+    if (personalInfo.summary) {
+        children.push(createSectionHeader('Summary'));
+        children.push(
+            new Paragraph({
+                children: [
+                    new TextRun({ text: personalInfo.summary, size: 20 }),
+                ],
+                alignment: AlignmentType.JUSTIFIED,
+                spacing: { after: 120 },
+            })
+        );
+    }
+
+    // Helper function to add experience items
+    const addExperienceSection = (title: string, items: PolishedExperience[]) => {
+        if (items.length === 0) return;
+
+        children.push(createSectionHeader(title));
+
+        for (const item of items) {
+            // Title and date
+            children.push(
                 new Paragraph({
                     children: [
-                        new TextRun({ text: `• ${bullet}`, size: 20 }),
+                        new TextRun({ text: item.title, bold: true, size: 22 }),
+                        new TextRun({ text: '\t', size: 22 }),
+                        new TextRun({
+                            text: `${formatDate(item.startDate)}-${item.current ? 'Present' : formatDate(item.endDate)}`,
+                            size: 20,
+                        }),
                     ],
-                    spacing: { before: 50 },
-                    indent: { left: 360 },
+                    tabStops: [
+                        { type: TabStopType.RIGHT, position: TabStopPosition.MAX },
+                    ],
+                    spacing: { before: 120 },
                 })
             );
-        }
-    }
 
-    // Education section
-    const educationContent: Paragraph[] = [];
-    for (const edu of education) {
-        educationContent.push(
-            new Paragraph({
-                children: [
-                    new TextRun({ text: `${edu.degree} in ${edu.field}`, bold: true, size: 22 }),
-                    new TextRun({
-                        text: `  |  ${formatDate(edu.startDate)} - ${edu.current ? 'Present' : formatDate(edu.endDate)}`,
-                        size: 18,
-                        color: '666666',
-                    }),
-                ],
-                spacing: { before: 150 },
-            })
-        );
-        educationContent.push(
-            new Paragraph({
-                children: [
-                    new TextRun({ text: edu.school, size: 20 }),
-                    ...(edu.gpa ? [new TextRun({ text: ` | GPA: ${edu.gpa}`, size: 20, color: '666666' })] : []),
-                ],
-            })
-        );
-        if (edu.achievements) {
-            educationContent.push(
+            // Company/Description
+            children.push(
                 new Paragraph({
-                    children: [new TextRun({ text: edu.achievements, size: 18, italics: true })],
-                    spacing: { before: 50 },
+                    children: [
+                        new TextRun({
+                            text: item.company + (item.technologies && item.technologies.length > 0 ? ` | ${item.technologies.join(', ')}` : ''),
+                            italics: true,
+                            size: 20,
+                            color: '333333',
+                        }),
+                    ],
+                    spacing: { after: 60 },
+                })
+            );
+
+            // Bullets
+            for (const bullet of item.bulletPoints) {
+                children.push(createBulletPoint(bullet));
+            }
+        }
+    };
+
+    // Education Section
+    const addEducationSection = () => {
+        if (education.length === 0) return;
+
+        children.push(createSectionHeader('Education'));
+
+        for (const edu of education) {
+            children.push(
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: `${edu.degree} (${edu.field})`, bold: true, size: 22 }),
+                        new TextRun({ text: '\t', size: 22 }),
+                        new TextRun({
+                            text: `${formatDate(edu.startDate)}-${edu.current ? 'Present' : formatDate(edu.endDate)}`,
+                            size: 20,
+                        }),
+                    ],
+                    tabStops: [
+                        { type: TabStopType.RIGHT, position: TabStopPosition.MAX },
+                    ],
+                    spacing: { before: 120 },
+                })
+            );
+
+            children.push(
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: edu.school, italics: true, size: 20, color: '333333' }),
+                    ],
+                })
+            );
+
+            if (edu.gpa) {
+                children.push(
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: `CGPA: ${edu.gpa}`, size: 20 }),
+                        ],
+                    })
+                );
+            }
+        }
+    };
+
+    // Skills Section
+    const addSkillsSection = () => {
+        children.push(createSectionHeader('Skills'));
+
+        if (skills.soft.length > 0) {
+            children.push(
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: 'Interpersonal: ', bold: true, size: 20 }),
+                        new TextRun({ text: skills.soft.join(', '), size: 20 }),
+                    ],
+                    spacing: { after: 60 },
                 })
             );
         }
-    }
 
-    // Skills section
-    const skillsContent: Paragraph[] = [];
-    if (skills.technical.length > 0) {
-        skillsContent.push(
-            new Paragraph({
-                children: [
-                    new TextRun({ text: 'Technical: ', bold: true, size: 20 }),
-                    new TextRun({ text: skills.technical.join(', '), size: 20 }),
-                ],
-                spacing: { before: 100 },
-            })
-        );
-    }
-    if (skills.soft.length > 0) {
-        skillsContent.push(
-            new Paragraph({
-                children: [
-                    new TextRun({ text: 'Soft Skills: ', bold: true, size: 20 }),
-                    new TextRun({ text: skills.soft.join(', '), size: 20 }),
-                ],
-            })
-        );
-    }
-    if (skills.languages && skills.languages.length > 0) {
-        skillsContent.push(
-            new Paragraph({
-                children: [
-                    new TextRun({ text: 'Languages: ', bold: true, size: 20 }),
-                    new TextRun({ text: skills.languages.join(', '), size: 20 }),
-                ],
-            })
-        );
-    }
+        if (skills.technical.length > 0) {
+            children.push(
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: 'Technical: ', bold: true, size: 20 }),
+                        new TextRun({ text: skills.technical.join(', '), size: 20 }),
+                    ],
+                    spacing: { after: 60 },
+                })
+            );
+        }
 
-    // Add sections based on profile type
+        if (skills.languages && skills.languages.length > 0) {
+            children.push(
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: 'Languages: ', bold: true, size: 20 }),
+                        new TextRun({ text: skills.languages.join(', '), size: 20 }),
+                    ],
+                })
+            );
+        }
+    };
+
+    // Certifications Section
+    const addCertificationsSection = () => {
+        if (!skills.certifications || skills.certifications.length === 0) return;
+
+        children.push(createSectionHeader('Certification'));
+
+        for (const cert of skills.certifications) {
+            children.push(createBulletPoint(cert));
+        }
+    };
+
+    // Build sections based on profile type
+    const jobs = experiences.filter(e => e.type === 'job');
+    const projects = experiences.filter(e => e.type === 'project');
+    const volunteer = experiences.filter(e => e.type === 'volunteer');
+
     if (isStudent) {
-        addSection('Education', educationContent);
-        addSection('Experience', experienceContent);
+        addEducationSection();
+        addExperienceSection('Work Experience', jobs);
+        addExperienceSection('Academic Projects', projects);
+        addExperienceSection('Extracurricular Activities', volunteer);
+        addSkillsSection();
+        addCertificationsSection();
     } else {
-        addSection('Experience', experienceContent);
-        addSection('Education', educationContent);
+        addExperienceSection('Work Experience', jobs);
+        addExperienceSection('Projects', projects);
+        addExperienceSection('Volunteer Experience', volunteer);
+        addEducationSection();
+        addSkillsSection();
+        addCertificationsSection();
     }
-    addSection('Skills', skillsContent);
 
     const doc = new Document({
         sections: [{
-            properties: {},
+            properties: {
+                page: {
+                    margin: {
+                        top: 720,
+                        bottom: 720,
+                        left: 720,
+                        right: 720,
+                    },
+                },
+            },
             children,
         }],
     });

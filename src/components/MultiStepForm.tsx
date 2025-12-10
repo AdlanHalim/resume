@@ -35,9 +35,13 @@ export function MultiStepForm() {
         }
     };
 
+    const handleEditResume = () => {
+        setCurrentStep('review');
+    };
+
     // If we have polished data and are on 'generate' step, show result preview
     if (currentStep === 'generate' && polishedData) {
-        return <ResultPreview data={polishedData} onStartOver={resetForm} />;
+        return <ResultPreview data={polishedData} onStartOver={resetForm} onEditResume={handleEditResume} />;
     }
 
     const renderStep = () => {
