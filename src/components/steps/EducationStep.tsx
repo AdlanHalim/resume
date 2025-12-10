@@ -2,11 +2,29 @@ import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import type { EducationEntry } from '../../types';
 import { Button } from '../ui/Button';
+import { DatePicker } from '../ui/DatePicker';
 import { Plus, Trash2, GraduationCap, ChevronDown, ChevronUp } from 'lucide-react';
 
 function generateId() {
     return Math.random().toString(36).substring(2, 11);
 }
+
+const DEGREE_OPTIONS = [
+    'High School Diploma',
+    'Associate Degree',
+    'Bachelor of Arts (BA)',
+    'Bachelor of Science (BS)',
+    'Bachelor of Engineering (BE)',
+    'Master of Arts (MA)',
+    'Master of Science (MS)',
+    'Master of Business Administration (MBA)',
+    'Doctor of Philosophy (PhD)',
+    'Doctor of Medicine (MD)',
+    'Juris Doctor (JD)',
+    'Certificate',
+    'Bootcamp',
+    'Other',
+];
 
 interface EducationCardProps {
     education: EducationEntry;
@@ -16,6 +34,25 @@ interface EducationCardProps {
 
 function EducationCard({ education, onUpdate, onRemove }: EducationCardProps) {
     const [isExpanded, setIsExpanded] = useState(true);
+    const [customDegree, setCustomDegree] = useState(
+        !DEGREE_OPTIONS.includes(education.degree) && education.degree ? education.degree : ''
+    );
+
+    const handleDegreeChange = (value: string) => {
+        if (value === 'Other') {
+            onUpdate({ degree: customDegree || 'Other' });
+        } else {
+            onUpdate({ degree: value });
+            setCustomDegree('');
+        }
+    };
+
+    const handleCustomDegreeChange = (value: string) => {
+        setCustomDegree(value);
+        onUpdate({ degree: value });
+    };
+
+    const isCustomDegree = !DEGREE_OPTIONS.includes(education.degree) || education.degree === 'Other';
 
     return (
         <div className="card p-4 animate-slide-in">
@@ -54,17 +91,30 @@ function EducationCard({ education, onUpdate, onRemove }: EducationCardProps) {
                                 onChange={(e) => onUpdate({ school: e.target.value })}
                                 className="input-field"
                                 placeholder="University of California, Berkeley"
+                                required
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Degree *</label>
-                            <input
-                                type="text"
-                                value={education.degree}
-                                onChange={(e) => onUpdate({ degree: e.target.value })}
+                            <select
+                                value={DEGREE_OPTIONS.includes(education.degree) ? education.degree : 'Other'}
+                                onChange={(e) => handleDegreeChange(e.target.value)}
                                 className="input-field"
-                                placeholder="Bachelor of Science"
-                            />
+                            >
+                                <option value="">Select Degree</option>
+                                {DEGREE_OPTIONS.map(degree => (
+                                    <option key={degree} value={degree}>{degree}</option>
+                                ))}
+                            </select>
+                            {isCustomDegree && (
+                                <input
+                                    type="text"
+                                    value={customDegree}
+                                    onChange={(e) => handleCustomDegreeChange(e.target.value)}
+                                    className="input-field mt-2"
+                                    placeholder="Enter custom degree"
+                                />
+                            )}
                         </div>
                     </div>
 
@@ -77,6 +127,7 @@ function EducationCard({ education, onUpdate, onRemove }: EducationCardProps) {
                                 onChange={(e) => onUpdate({ field: e.target.value })}
                                 className="input-field"
                                 placeholder="Computer Science"
+                                required
                             />
                         </div>
                         <div className="space-y-2">
@@ -84,33 +135,31 @@ function EducationCard({ education, onUpdate, onRemove }: EducationCardProps) {
                             <input
                                 type="text"
                                 value={education.gpa || ''}
-                                onChange={(e) => onUpdate({ gpa: e.target.value })}
+                                onChange={(e) => {
+                                    // Only allow numbers, dots, and forward slash
+                                    const value = e.target.value.replace(/[^0-9./]/g, '');
+                                    onUpdate({ gpa: value });
+                                }}
                                 className="input-field"
-                                placeholder="3.8/4.0"
+                                placeholder="3.8/4.0 or 3.8"
+                                pattern="[0-9.\/]+"
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label>
-                            <input
-                                type="month"
-                                value={education.startDate}
-                                onChange={(e) => onUpdate({ startDate: e.target.value })}
-                                className="input-field"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">End Date</label>
-                            <input
-                                type="month"
-                                value={education.endDate}
-                                onChange={(e) => onUpdate({ endDate: e.target.value })}
-                                className="input-field"
-                                disabled={education.current}
-                            />
-                        </div>
+                        <DatePicker
+                            label="Start Date"
+                            value={education.startDate}
+                            onChange={(value) => onUpdate({ startDate: value })}
+                            required
+                        />
+                        <DatePicker
+                            label="End Date"
+                            value={education.endDate}
+                            onChange={(value) => onUpdate({ endDate: value })}
+                            disabled={education.current}
+                        />
                         <div className="flex items-end pb-3">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input

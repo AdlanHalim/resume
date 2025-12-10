@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import type { ExperienceBlock, ExperienceType } from '../../types';
 import { Button } from '../ui/Button';
+import { DatePicker } from '../ui/DatePicker';
 import { Plus, Trash2, Briefcase, FolderGit2, Heart, ChevronDown, ChevronUp } from 'lucide-react';
 
 function generateId() {
@@ -64,6 +65,7 @@ function ExperienceCard({ experience, onUpdate, onRemove }: ExperienceCardProps)
                                 onChange={(e) => onUpdate({ title: e.target.value })}
                                 className="input-field"
                                 placeholder={config.titleLabel}
+                                required
                             />
                         </div>
                         <div className="space-y-2">
@@ -76,30 +78,24 @@ function ExperienceCard({ experience, onUpdate, onRemove }: ExperienceCardProps)
                                 onChange={(e) => onUpdate({ company: e.target.value })}
                                 className="input-field"
                                 placeholder={config.companyLabel}
+                                required
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label>
-                            <input
-                                type="month"
-                                value={experience.startDate}
-                                onChange={(e) => onUpdate({ startDate: e.target.value })}
-                                className="input-field"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">End Date</label>
-                            <input
-                                type="month"
-                                value={experience.endDate}
-                                onChange={(e) => onUpdate({ endDate: e.target.value })}
-                                className="input-field"
-                                disabled={experience.current}
-                            />
-                        </div>
+                        <DatePicker
+                            label="Start Date"
+                            value={experience.startDate}
+                            onChange={(value) => onUpdate({ startDate: value })}
+                            required
+                        />
+                        <DatePicker
+                            label="End Date"
+                            value={experience.endDate}
+                            onChange={(value) => onUpdate({ endDate: value })}
+                            disabled={experience.current}
+                        />
                         <div className="flex items-end pb-3">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input
@@ -121,7 +117,7 @@ function ExperienceCard({ experience, onUpdate, onRemove }: ExperienceCardProps)
                                 value={experience.technologies?.join(', ') || ''}
                                 onChange={(e) => onUpdate({ technologies: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })}
                                 className="input-field"
-                                placeholder="React, TypeScript, Node.js"
+                                placeholder="React, TypeScript, Node.js (comma separated)"
                             />
                         </div>
                     )}
@@ -135,6 +131,7 @@ function ExperienceCard({ experience, onUpdate, onRemove }: ExperienceCardProps)
                             onChange={(e) => onUpdate({ description: e.target.value })}
                             className="input-field min-h-[120px] resize-y"
                             placeholder="Describe your responsibilities, achievements, and impact. Be specific about what you built, problems you solved, and any metrics or results. Don't worry about formatting - our AI will create professional bullet points."
+                            required
                         />
                     </div>
                 </div>

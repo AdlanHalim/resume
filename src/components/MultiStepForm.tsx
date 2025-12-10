@@ -7,7 +7,7 @@ import { ExperienceStep } from './steps/ExperienceStep';
 import { EducationStep } from './steps/EducationStep';
 import { SkillsStep } from './steps/SkillsStep';
 import { ReviewStep } from './steps/ReviewStep';
-import { PDFPreview } from './pdf/PDFPreview';
+import { ResultPreview } from './pdf/ResultPreview';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const STEPS: { key: FormStep; label: string }[] = [
@@ -35,9 +35,9 @@ export function MultiStepForm() {
         }
     };
 
-    // If we have polished data and are on 'generate' step, show PDF preview
+    // If we have polished data and are on 'generate' step, show result preview
     if (currentStep === 'generate' && polishedData) {
-        return <PDFPreview data={polishedData} onStartOver={resetForm} />;
+        return <ResultPreview data={polishedData} onStartOver={resetForm} />;
     }
 
     const renderStep = () => {

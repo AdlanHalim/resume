@@ -131,13 +131,10 @@ export const handler: Handler = async (event) => {
             };
         }
 
-        // Initialize Gemini
+        // Initialize Gemini - use gemini-2.5-flash (latest free tier model)
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
-            generationConfig: {
-                responseMimeType: 'application/json',
-            },
+            model: 'gemini-2.5-flash',
         });
 
         const userPrompt = `Transform the following resume data into a polished, professional format:
